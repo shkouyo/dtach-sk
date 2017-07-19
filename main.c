@@ -36,6 +36,7 @@ int detach_char = '\\' - 64;
 int no_suspend;
 /* The default redraw method. Initially set to unspecified. */
 int redraw_method = REDRAW_UNSPEC;
+int quiet = 0;
 
 /*
 ** The original terminal settings. Shared between the master and attach
@@ -121,6 +122,7 @@ usage()
 	       "\t\t   ctrl_l: Send a Ctrl L character to the program.\n"
 	       "\t\t    winch: Send a WINCH signal to the program.\n"
 	       "  -z\t\tDisable processing of the suspend key.\n"
+	       "  -q\t\tDisable printing of additional messages.\n"
 	       "\nReport any bugs to <" PACKAGE_BUGREPORT ">.\n",
 		PACKAGE_VERSION, __DATE__, __TIME__);
 	exit(0);
@@ -207,6 +209,8 @@ main(int argc, char **argv)
 				detach_char = -1;
 			else if (*p == 'z')
 				no_suspend = 1;
+			else if (*p == 'q')
+				quiet = 1;
 			else if (*p == 'e')
 			{
 				++argv; --argc;

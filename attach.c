@@ -253,8 +253,9 @@ attach_main(int noerror)
 
 			if (len == 0)
 			{
-				printf(EOS "\r\n[EOF - dtach terminating]"
-				       "\r\n");
+				if (!quiet)
+					printf(EOS "\r\n[EOF - dtach terminating]"
+					       "\r\n");
 				exit(0);
 			}
 			else if (len < 0)

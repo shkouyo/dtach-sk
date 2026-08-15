@@ -24,7 +24,7 @@
 */
 
 /* Make sure the binary has a copyright. */
-const char copyright[] = "dtach - version " PACKAGE_VERSION "(C)Copyright 2004-2016 Ned T. Crigler";
+const char copyright[] = "dtach-sk " PACKAGE_VERSION "Copyright (C) 2004-2016 Ned T. Crigler";
 
 /* argv[0] from the program */
 char *progname;
@@ -93,7 +93,7 @@ static void
 usage()
 {
 	printf(
-	       "dtach - version %s, compiled on %s at %s.\n"
+	       "dtach-sk %s, compiled on %s at %s.\n"
 	       "Usage: dtach -a <socket> <options>\n"
 	       "       dtach -A <socket> <options> <command...>\n"
 	       "       dtach -c <socket> <options> <command...>\n"
@@ -123,6 +123,8 @@ usage()
 	       "\t\t    winch: Send a WINCH signal to the program.\n"
 	       "  -z\t\tDisable processing of the suspend key.\n"
 	       "  -q\t\tDisable printing of additional messages.\n"
+	       "Environment:\n"
+	       "  DTACH_SOCKET\tThe socket path of the current dtach session.\n"
 	       "\nReport any bugs to <" PACKAGE_BUGREPORT ">.\n",
 		PACKAGE_VERSION, __DATE__, __TIME__);
 	exit(0);
@@ -144,7 +146,7 @@ main(int argc, char **argv)
 			usage();
 		else if (strncmp(*argv, "--version", strlen(*argv)) == 0)
 		{
-			printf("dtach - version %s, compiled on %s at %s.\n",
+			printf("dtach-sk %s, compiled on %s at %s.\n",
 			       PACKAGE_VERSION, __DATE__, __TIME__);
 			return 0;
 		}

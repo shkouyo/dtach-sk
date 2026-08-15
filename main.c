@@ -37,6 +37,8 @@ int no_suspend;
 /* The default redraw method. Initially set to unspecified. */
 int redraw_method = REDRAW_UNSPEC;
 int quiet = 0;
+/* Number of bytes of output history to replay when attaching. */
+size_t history_size = 1024 * 1024;
 
 /*
 ** The original terminal settings. Shared between the master and attach
@@ -121,6 +123,9 @@ usage()
 	       "\t\t     none: Don't redraw at all.\n"
 	       "\t\t   ctrl_l: Send a Ctrl L character to the program.\n"
 	       "\t\t    winch: Send a WINCH signal to the program.\n"
+	       "  -H <bytes>\tSet output history size in bytes, defaults "
+	       "to 1048576.\n"
+	       "\t\t  Use 0 to disable history replay.\n"
 	       "  -z\t\tDisable processing of the suspend key.\n"
 	       "  -q\t\tDisable printing of additional messages.\n"
 	       "Environment:\n"
@@ -260,6 +265,35 @@ main(int argc, char **argv)
 					       "information.\n", progname);
 					return 1;
 				}
+				break;
+			}
+			else if (*p == 'H')
+			{
+				char *end;
+				unsigned long value;
+
+				++argv; --argc;
+				if (argc < 1)
+				{
+					printf("%s: No history size specified.\n",
+					       progname);
+					printf("Try '%s --help' for more information.\n",
+					       progname);
+					return 1;
+				}
+
+				errno = 0;
+				value = strtoul(argv[0], &end, 10);
+				if (argv[0][0] == '\0' || *end != '\0' || errno == ERANGE ||
+				    value > (unsigned long)((size_t)-1))
+				{
+					printf("%s: Invalid history size specified.\n",
+					       progname);
+					printf("Try '%s --help' for more information.\n",
+					       progname);
+					return 1;
+				}
+				history_size = (size_t)value;
 				break;
 			}
 			else

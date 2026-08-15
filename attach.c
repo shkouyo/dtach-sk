@@ -39,8 +39,9 @@ restore_term(void)
 {
 	tcsetattr(0, TCSADRAIN, &orig_term);
 
-	/* Make cursor visible. Assumes VT100. */
-	printf("\033[?25h");
+	/* Leave the alternate screen and make the cursor visible.
+	** Assumes VT100. */
+	printf("\033[?1049l\033[?25h");
 	fflush(stdout);
 }
 
@@ -109,6 +110,11 @@ process_kbd(int s, struct packet *pkt)
 	/* Suspend? */
 	if (!no_suspend && (pkt->u.buf[0] == cur_term.c_cc[VSUSP]))
 	{
+		/* Leave the alternate screen and show the cursor, so
+		** that the shell is usable. */
+		printf("\033[?1049l\033[?25h");
+		fflush(stdout);
+
 		/* Tell the master that we are suspending. */
 		pkt->type = MSG_DETACH;
 		write_packet_or_fail(s, pkt);

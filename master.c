@@ -309,6 +309,81 @@ history_replay(int fd)
 	return 0;
 }
 
+/* 1 if the program is running in the alternate screen. */
+static int alt_screen;
+
+/* The sequence that switches a terminal to the alternate screen and
+** clears it. */
+static const char alt_enter[] = "\033[?1049h\033[H\033[J";
+
+/* The state of the alternate screen detector. */
+enum
+{
+	ALT_IDLE,	/* Not in the middle of a sequence. */
+	ALT_ESC,	/* Saw the escape character. */
+	ALT_CSI,	/* Saw "ESC[". */
+	ALT_DEC,	/* Saw "ESC[?". */
+};
+
+static int alt_state = ALT_IDLE;
+static int alt_param;
+
+/* Watches the output of the program for the escape sequences that
+** switch between the main and alternate screens, so that newly
+** attached clients can be switched to the same screen. The sequences
+** span chunk boundaries, so the state is kept between calls. */
+static void
+detect_alt_screen(const unsigned char *buf, size_t len)
+{
+	size_t i;
+
+	for (i = 0; i < len; i++)
+	{
+		unsigned char c = buf[i];
+
+		switch (alt_state)
+		{
+		case ALT_IDLE:
+			if (c == '\033')
+				alt_state = ALT_ESC;
+			break;
+		case ALT_ESC:
+			if (c == '[')
+				alt_state = ALT_CSI;
+			else if (c != '\033')
+				alt_state = ALT_IDLE;
+			break;
+		case ALT_CSI:
+			if (c == '?')
+			{
+				alt_state = ALT_DEC;
+				alt_param = 0;
+			}
+			else if (c != '\033')
+				alt_state = ALT_IDLE;
+			break;
+		case ALT_DEC:
+			if (c >= '0' && c <= '9')
+			{
+				if (alt_param < 10000)
+					alt_param = alt_param * 10 + c - '0';
+			}
+			else if (c == 'h' || c == 'l')
+			{
+				if (alt_param == 1049 || alt_param == 1047 ||
+				    alt_param == 47)
+					alt_screen = (c == 'h');
+				alt_state = ALT_IDLE;
+			}
+			else if (c == ';')
+				; /* More parameters; keep looking. */
+			else if (c != '\033')
+				alt_state = ALT_IDLE;
+			break;
+		}
+	}
+}
+
 /* Signal */
 static RETSIGTYPE
 die(int sig)
@@ -518,7 +593,7 @@ pty_activity(int s)
 	}
 
 	history_append(buf, len);
-
+	detect_alt_screen(buf, len);
 #ifdef BROKEN_MASTER
 	/* Get the current terminal settings. */
 	if (tcgetattr(the_pty.slave, &the_pty.term) < 0)
@@ -648,6 +723,16 @@ client_activity(struct client *p)
 	else if (pkt.type == MSG_ATTACH)
 	{
 		p->attached = 1;
+		/* If the program is in the alternate screen, switch the client
+		** to it as well, and clear it so that the replay starts on a
+		** clean screen. */
+		if (alt_screen &&
+		    write_client_buf(p->fd, (const unsigned char *)alt_enter,
+		                     sizeof(alt_enter) - 1) < 0)
+		{
+			close_client(p);
+			return;
+		}
 		if (history_replay(p->fd) < 0)
 			close_client(p);
 	}

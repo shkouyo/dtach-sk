@@ -91,6 +91,20 @@ write_packet_or_fail(int fd, const struct packet *pkt)
 	}
 }
 
+/* Parse an escape character specification. Supports the "^X" form
+** used by the -e option, as well as a literal character. */
+static int
+parse_escape_char(const char *spec)
+{
+	if (spec[0] == '^' && spec[1])
+	{
+		if (spec[1] == '?')
+			return '\177';
+		return spec[1] & 037;
+	}
+	return spec[0];
+}
+
 static void
 usage()
 {
@@ -130,6 +144,8 @@ usage()
 	       "  -q\t\tDisable printing of additional messages.\n"
 	       "Environment:\n"
 	       "  DTACH_SOCKET\tThe socket path of the current dtach session.\n"
+	       "  DTACH_ESCAPE_CHAR\tThe default detach character, in the\n"
+	       "\t\t  same format as the -e option.\n"
 	       "\nReport any bugs to <" PACKAGE_BUGREPORT ">.\n",
 		PACKAGE_VERSION, __DATE__, __TIME__);
 	exit(0);
@@ -224,6 +240,15 @@ main(int argc, char **argv)
 		return push_main();
 	}
 
+	/* Use the DTACH_ESCAPE_CHAR environment variable as the default
+	** escape character, if set. The -e and -E options override it. */
+	{
+		const char *env = getenv("DTACH_ESCAPE_CHAR");
+
+		if (env && env[0])
+			detach_char = parse_escape_char(env);
+	}
+
 	while (argc >= 1 && **argv == '-')
 	{
 		char *p;
@@ -253,15 +278,7 @@ main(int argc, char **argv)
 					       "information.\n", progname);
 					return 1;
 				}
-				if (argv[0][0] == '^' && argv[0][1])
-				{
-					if (argv[0][1] == '?')
-						detach_char = '\177';
-					else
-						detach_char = argv[0][1] & 037;
-				}
-				else
-					detach_char = argv[0][0];
+				detach_char = parse_escape_char(argv[0]);
 				break;
 			}
 			else if (*p == 'r')

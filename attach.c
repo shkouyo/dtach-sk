@@ -139,7 +139,8 @@ process_kbd(int s, struct packet *pkt)
 	/* Detach char? */
 	else if (pkt->u.buf[0] == detach_char)
 	{
-		printf(EOS "\r\n[detached]\r\n");
+		if (!quiet)
+			printf(EOS "\r\n[detached]\r\n");
 		exit(0);
 	}
 	/* Just in case something pukes out. */

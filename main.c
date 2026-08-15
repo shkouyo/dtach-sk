@@ -187,6 +187,30 @@ main(int argc, char **argv)
 	sockname = *argv;
 	++argv; --argc;
 
+	/* Resolve the socket name to an absolute path, so that the
+	** socket can be found and identified from anywhere. */
+	if (sockname[0] != '/')
+	{
+		char *cwd = getcwd(NULL, 0);
+		char *name;
+
+		if (!cwd)
+		{
+			printf("%s: getcwd: %s\n", progname, strerror(errno));
+			return 1;
+		}
+		name = malloc(strlen(cwd) + strlen(sockname) + 2);
+		if (!name)
+		{
+			printf("%s: %s\n", progname, strerror(errno));
+			free(cwd);
+			return 1;
+		}
+		sprintf(name, "%s/%s", cwd, sockname);
+		free(cwd);
+		sockname = name;
+	}
+
 	if (mode == 'p')
 	{
 		if (argc > 0)
